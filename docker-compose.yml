@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # Serviço PHP-FPM
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ifood_php
+    volumes:
+      - .:/var/www/html # Monta a pasta atual (raiz do projeto)
+    depends_on:
+      - db
+    environment:
+      # Variáveis de ambiente para o PHP, se necessário.
+      # A conexão com o banco será feita no arquivo de config do script.
+      - APP_ENV=production
+
+  # Serviço Nginx
+  nginx:
+    image: nginx:stable-alpine
+    container_name: ifood_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - .:/var/www/html # Compartilha a mesma pasta raiz com o PHP
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+
+  # Serviço MySQL
+  db:
+    image: mysql:8.0
+    container_name: ifood_mysql
+    environment:
+      MYSQL_DATABASE: ifood_db
+      MYSQL_USER: ifood_user
+      MYSQL_PASSWORD: sua_senha_forte # <-- MUDE A SENHA AQUI
+      MYSQL_ROOT_PASSWORD: outra_senha_forte_para_root # <-- MUDE A SENHA AQUI
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+volumes:
+  db_data:
