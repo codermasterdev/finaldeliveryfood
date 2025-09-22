@@ -21,7 +21,7 @@
 
 $connect = [
     // Database Host Name
-    'HOSTNAME' => 'ilicnea_restaaurante_maria',
+    'HOSTNAME' => 'ilicnea_restaaurantemaria',
 
     // Database Username
     'USERNAME' => 'restauranteus',
