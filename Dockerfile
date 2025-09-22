@@ -1,44 +1,38 @@
-# Usa uma imagem base do PHP com FPM para Nginx
-FROM php:8.2-fpm-alpine
+# Usamos uma imagem base oficial do PHP 7.4 com FPM, baseada em Alpine Linux (super leve)
+FROM php:7.4-fpm-alpine
 
-# Instala extensões PHP e dependências.
-# A extensão 'gd' é importante para manipulação de imagens (logos de restaurantes, etc.)
-RUN apk add --no-cache \
-    mysql-client \
-    libzip-dev \
-    icu-dev \
-    jpeg-dev \
-    png-dev \
-    freetype-dev \
+# Instala as dependências necessárias: Nginx, Git e extensões comuns do PHP
+RUN apk update && apk add --no-cache \
+    nginx \
     git \
-    && docker-php-ext-install \
-    mysqli \
-    pdo_mysql \
-    gd \
-    mbstring \
-    zip \
-    exif \
-    intl \
-    opcache \
-    && docker-php-ext-configure gd --with-jpeg --with-freetype \
-    && rm -rf /var/cache/apk/*
+    libzip-dev \
+    libpng-dev \
+    jpeg-dev \
+    freetype-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd mysqli zip pdo pdo_mysql
 
-# Instala o Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-
-# Define o diretório de trabalho
+# Define o diretório de trabalho dentro do container
 WORKDIR /var/www/html
 
-# Copia TODOS os arquivos do projeto para o diretório de trabalho do container
+# Copia a configuração customizada do Nginx para dentro da imagem
+COPY .docker/nginx/default.conf /etc/nginx/http.d/default.conf
+
+# Copia o script de inicialização para dentro da imagem e o torna executável
+COPY .docker/start.sh /start.sh
+RUN chmod +x /start.sh
+
+# Copia todos os arquivos do seu projeto para o diretório de trabalho
 COPY . .
 
-# Dá permissão para o servidor web escrever nas pastas necessárias
-# A pasta 'uploads' e 'uploads-temp' são essenciais para o funcionamento do script
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 775 /var/www/html/uploads /var/www/html/uploads-temp
+# Garante que o servidor web tenha permissão para escrever nas pastas necessárias
+RUN chown -R www-data:www-data /var/www/html/uploads \
+    && chown -R www-data:www-data /var/www/html/uploads-temp \
+    && chown -R www-data:www-data /var/www/html/cpanel \
+    && chown -R www-data:www-data /var/www/html/configs
 
-# Expor a porta 9000 para o PHP-FPM
-EXPOSE 9000
+# Expõe a porta 80, que é a porta padrão para web
+EXPOSE 80
 
-# Comando para iniciar o PHP-FPM
-CMD ["php-fpm"]
+# Comando que será executado quando o container iniciar
+CMD ["/start.sh"]
